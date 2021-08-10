@@ -1,19 +1,49 @@
+import axios from "axios";
 import React, { useState } from "react";
-import { Button, Form } from "react-bootstrap";
+import { Button, Form, Alert } from "react-bootstrap";
 import "./css/register.css";
+import { BASE_URI } from "../../config/config";
+import { Link, withRouter } from "react-router-dom";
 
-export default function NewUserForm() {
+const NewUserForm = function () {
   const [userName, setUserName] = useState("");
   const [password, setPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
+  const [errorMsg, setErrorMsg] = useState("");
+  const [successMsg, setSuccessMsg] = useState("");
 
   function handleSubmit(event) {
     event.preventDefault();
+
+    if(password !== confirmPassword) {
+      setErrorMsg("Passwords do not match");
+      return;
+    }
+
+    axios.post(`${BASE_URI}/api/auth/register`, {
+      username: userName,
+      password: password,
+    }).then(resp => {
+      if(resp.statusText === "OK") {
+        setSuccessMsg(resp.data.message);
+        setErrorMsg("");
+      }
+    })
+    .catch(err => {
+      setSuccessMsg("");
+      setErrorMsg(err.response.data.message)
+    });
   }
 
   function validateInputs() {
     return (
       userName.length > 0 && password.length > 0 && confirmPassword.length > 0
+    );
+  }
+
+  function renderMessage(type, msg) {
+    return (
+      <Alert variant={type}>{msg}</Alert>
     );
   }
 
@@ -47,11 +77,26 @@ export default function NewUserForm() {
           />
         </Form.Group>
         <Form.Group>
-          <Button block size="lg" type="submit" disabled={!validateInputs()}>
-            Register
-          </Button>
+          <Form.Row>
+            <Button block size="lg" type="submit" disabled={!validateInputs()}>
+              Register
+            </Button>
+              <Link to="/login">
+                <Button block size="lg">
+                  Back to Login
+                </Button>
+              </Link>
+          </Form.Row>
         </Form.Group>
+        {
+          errorMsg && renderMessage("danger", errorMsg)
+        }
+        {
+          successMsg && renderMessage("success", successMsg)
+        }
       </Form>
     </div>
   );
 }
+
+export default withRouter(NewUserForm);

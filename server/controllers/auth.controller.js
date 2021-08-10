@@ -63,8 +63,17 @@ exports.login = (req, res) => {
       let token = jwt.sign({ id: user.id }, config.secret, {
         expiresIn: 86400,
       });
+
+      user.getRoles().then(roles => {
+        res.status(200).send({
+          username: user.username,
+          roles: roles.map(role => role.name),
+          userid: user.id
+        });
+      });
     })
     .catch((err) => {
+      console.log(err);
       res.status(500).send({ message: err.message });
     });
 };

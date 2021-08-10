@@ -1,5 +1,5 @@
 const authJwt = require("../middleware");
-const controller = require("../controllers/auth.controller");
+const controller = require("../controllers/product.controller");
 
 module.exports = function (app) {
   app.use(function (req, res, next) {
@@ -9,4 +9,24 @@ module.exports = function (app) {
     );
     next();
   });
+
+  app.post(
+    "/api/getProducts",
+    controller.getProducts
+  );
+
+  app.post(
+    "/api/addProduct",
+    controller.addProduct
+  );
+
+  app.put(
+    "/api/editProduct",
+    controller.editProduct
+  );
+
+  app.post(
+    "/api/deleteProduct",
+    controller.deleteProduct
+  );
 };
