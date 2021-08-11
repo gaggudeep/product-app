@@ -2,7 +2,7 @@
 ## Users
 1. admin: Able to edit, add, delete products.
 2. user
-3. 
+
 ## Requirements
 1. nodejs, react
 2. MySQL
