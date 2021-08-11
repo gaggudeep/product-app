@@ -6,7 +6,7 @@ const Product = db.product;
 exports.addProduct = (req, res) => {
   Product.create({
     name: req.body.productname,
-    user: req.body.userid
+    userId: req.body.userid
   })
   .then(product => {
     res.status(200).send({

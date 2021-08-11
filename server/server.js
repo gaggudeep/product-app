@@ -41,7 +41,7 @@ function init() {
   }).then(user => user.setRoles([2]))
 
   Product.create({
-    user: 1,
+    userId: 1,
     name: "Abc"
   })
 }

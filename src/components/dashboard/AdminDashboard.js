@@ -1,27 +1,49 @@
 import axios from "axios";
-import React, { useState } from "react";
-import { ListGroup, Button, Form, Modal, ListGroupItem } from "react-bootstrap";
+import React, { useEffect, useState } from "react";
+import { ListGroup, Button, Form, Modal, ListGroupItem, Container, ButtonGroup, Col } from "react-bootstrap";
 import { withRouter } from "react-router-dom";
 import { BASE_URI } from "../../config/config";
 
 const AdminDashboard = function (props) {
 
   const [products, setProducts] = useState([]);
-  const [init, setInit] = useState(true);
-  const [show, setShow] = useState(false);
+  const [showAdd, setShowAdd] = useState(false);
+  const [showEdit, setShowEdit] = useState(false);
+  const [showDelete, setShowDelete] = useState(false);
+  const [currentProductId, setCurrentProductId] = useState(-1);
+  const [currentProductName, setCurrentProductName] = useState("");
 
-  const handleClose = () => setShow(false);
-  const handleShow = () => setShow(true);
+  useEffect(() => fetchProducts(), []); 
+
+  const handleAddClose = () => setShowAdd(false);
+  const handleAddShow = () => setShowAdd(true);
+  const handleEditClose = () => {
+    setShowEdit(false);
+  };
+  const handleEditShow = (event) => {
+    setCurrentProductId(event.target.id);
+    setShowEdit(true);
+  };
+  const handleDeleteClose = () => {
+    setShowDelete(false);
+  };
+  const handleDeleteShow = (event) => {
+    setCurrentProductId(event.target.id);
+    setShowDelete(true);
+  };
 
   function fetchProducts() {
-    console.log(props.data.userId);
     axios.post(`${BASE_URI}/api/getProducts`, {
       userid: props.data.userId
     })
     .then(resp => {
       if(resp.statusText === "OK") {
-        if(resp.data.products)
-          setProducts(resp.data.products);
+        if(resp.data.user.products) {
+          setProducts((_) => {
+            const newList = resp.data.user.products;
+            return newList;
+          });
+        }
       }
     })
     .catch(err => {
@@ -31,34 +53,47 @@ const AdminDashboard = function (props) {
 
   function addProduct(event) {
     event.preventDefault();
-    handleClose();
-    let newProductName = event.target.value;
+    handleAddClose();
+    let newProductName = document.getElementById("newProduct").value;
     axios.post(`${BASE_URI}/api/addProduct`, {
       productname: newProductName,
       userid: props.data.userId
     })
     .then(resp => {
-      let newProds = products;
-      newProds.add(resp.data.product);
-      setProducts(newProds);
-      console.log(newProds);
+      setProducts(oldList => {
+        const newList = [...oldList];
+        newList.push(resp.data.product);
+        return newList;
+      });
     })
     .catch(err => {
-      console.log(err.response?.data.message);
+      console.log("error:", err);
     });
   };
 
-  function editProduct() {
-
+  function editProduct(event) {
+    event.preventDefault();
+    console.log(`editing: ${currentProductId} ${currentProductName}`);
+    axios.put(`${BASE_URI}/api/editProduct`, {
+      productid: currentProductId,
+      productname: currentProductName
+    })
+    .then(resp => {
+      fetchProducts();
+      handleEditClose();
+    })
+    .catch(err => console.log(err))
   }
 
-  function deleteProduct() {
-
-  }
-
-  if(init) {
-    fetchProducts();
-    setInit(false);
+  function deleteProduct(event) {
+    event.preventDefault();
+    axios.post(`${BASE_URI}/api/deleteProduct`, {
+      productid: currentProductId
+    })
+    .then(resp => {
+      handleDeleteClose();
+      fetchProducts();
+    })
   }
 
   if(!props.data.isAuthenticated || !props.data.isAdmin) {
@@ -67,10 +102,10 @@ const AdminDashboard = function (props) {
   return (
     <div className="AdminDashboard">
       <h2>Product(s) added by you</h2>
-      <Button variant="primary" onClick={handleShow}>
+      <Button variant="primary" onClick={handleAddShow}>
         Add Product
       </Button>
-      <Modal show={show} onHide={handleClose}>
+      <Modal show={showAdd} onHide={handleAddClose}>
         <Modal.Header closeButton>
           <Modal.Title>Add Product</Modal.Title>
         </Modal.Header>
@@ -78,31 +113,85 @@ const AdminDashboard = function (props) {
           <Form onSubmit={addProduct}>
             <Form.Group>
               <Form.Control
+                id="newProduct"
                 autoFocus
                 type="text"
                 placeholder="Enter product name"
               />
             </Form.Group>
             <Modal.Footer>
-              <Button variant="secondary" onClick={handleClose}>
+              <Button variant="secondary" onClick={handleAddClose}>
                 Close
               </Button>
-              <Button variant="primary" type="submit" onSubmit={addProduct}>
+              <Button variant="primary" type="submit">
                 Add
               </Button>
             </Modal.Footer>
           </Form>
         </Modal.Body>
       </Modal>
-      {/* {
-        products?.map(product => {
-          return (
-            <ListGroup>
-              <ListGroupItem>{product.name}</ListGroupItem>
-            </ListGroup>
-          )
-        })
-      } */}
+      <Container className="mt-2">
+        {
+          products.map(product => {
+            return (
+              <ListGroup className="mb-1" horizontal key={product.id}>
+                <Col sm={8} >
+                  <ListGroupItem key={product.id}>{product.name}</ListGroupItem>
+                </Col>
+                <Col sm={6}>
+                  <ButtonGroup>
+                    <Button id={product.id} variant="warning" onClick={handleEditShow}>Edit</Button>
+                    <Modal show={showEdit} onHide={handleEditClose}>
+                      <Modal.Header closeButton>
+                        <Modal.Title>Edit Product</Modal.Title>
+                      </Modal.Header>
+                      <Modal.Body>
+                        <Form onSubmit={editProduct}>
+                          <Form.Group>
+                            <Form.Control
+                              id={`productName-${product.id}`}
+                              autoFocus
+                              type="text"
+                              placeholder="Enter new name for product"
+                              onChange={(e) => setCurrentProductName(e.target.value)}
+                            />
+                          </Form.Group>
+                          <Modal.Footer>
+                            <Button variant="secondary" onClick={handleEditClose}>
+                              Close
+                            </Button>
+                            <Button variant="primary" type="submit">
+                              Save change
+                            </Button>
+                          </Modal.Footer>
+                        </Form>
+                      </Modal.Body>
+                    </Modal>
+
+                    <Button variant="danger" id={product.id} onClick={handleDeleteShow}>Delete</Button>
+                    <Modal show={showDelete} onHide={handleDeleteClose}>
+                      <Modal.Header closeButton>
+                        <Modal.Title>Delete Product</Modal.Title>
+                      </Modal.Header>
+                      <Modal.Body>
+                        Are you Sure you want to delete this product?
+                        <Modal.Footer>
+                          <Button variant="success" type="submit" onClick={deleteProduct}>
+                            Yes
+                          </Button>
+                          <Button variant="danger" onClick={handleDeleteClose}>
+                            No
+                          </Button>
+                        </Modal.Footer>
+                      </Modal.Body>
+                    </Modal>
+                  </ButtonGroup>
+                </Col>
+              </ListGroup>
+            )
+          })
+        }
+      </Container>
     </div>
   );
 }
